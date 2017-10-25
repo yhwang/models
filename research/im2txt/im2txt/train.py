@@ -23,6 +23,7 @@ import tensorflow as tf
 
 from im2txt import configuration
 from im2txt import show_and_tell_model
+from im2txt import show_and_tell_model_multi_gpu
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -35,8 +36,12 @@ tf.flags.DEFINE_string("train_dir", "",
 tf.flags.DEFINE_boolean("train_inception", False,
                         "Whether to train inception submodel variables.")
 tf.flags.DEFINE_integer("number_of_steps", 1000000, "Number of training steps.")
-tf.flags.DEFINE_integer("log_every_n_steps", 1,
+tf.flags.DEFINE_integer("log_every_n_steps", 100,
                         "Frequency at which loss and global step are logged.")
+tf.flags.DEFINE_integer("num_gpus", 1,
+                        "Number of GPUs.")
+tf.flags.DEFINE_integer("gpu_offset", 0,
+                        "The initial GPU index.")
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -46,6 +51,8 @@ def main(unused_argv):
   assert FLAGS.train_dir, "--train_dir is required"
 
   model_config = configuration.ModelConfig()
+  model_config.num_gpus = FLAGS.num_gpus
+  model_config.gpu_offset = FLAGS.gpu_offset
   model_config.input_file_pattern = FLAGS.input_file_pattern
   model_config.inception_checkpoint_file = FLAGS.inception_checkpoint_file
   training_config = configuration.TrainingConfig()
@@ -60,8 +67,11 @@ def main(unused_argv):
   g = tf.Graph()
   with g.as_default():
     # Build the model.
-    model = show_and_tell_model.ShowAndTellModel(
-        model_config, mode="train", train_inception=FLAGS.train_inception)
+    #modelimpl = show_and_tell_model_multi_gpu if FLAGS.num_gpus > 1  else \
+    #  show_and_tell_model
+    modelimpl = show_and_tell_model_multi_gpu
+    model = modelimpl.ShowAndTellModel(
+      model_config, mode="train", train_inception=FLAGS.train_inception)
     model.build()
 
     # Set up the learning rate.
@@ -107,7 +117,8 @@ def main(unused_argv):
       global_step=model.global_step,
       number_of_steps=FLAGS.number_of_steps,
       init_fn=model.init_fn,
-      saver=saver)
+      saver=saver,
+      session_config=tf.ConfigProto(log_device_placement=None, allow_soft_placement=True))
 
 
 if __name__ == "__main__":

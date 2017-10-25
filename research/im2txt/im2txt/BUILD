@@ -43,6 +43,18 @@ py_library(
     ],
 )
 
+py_library(
+    name = "show_and_tell_model_multi_gpu",
+    srcs = ["show_and_tell_model_multi_gpu.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        "//im2txt/ops:image_embedding",
+        "//im2txt/ops:image_processing",
+        "//im2txt/ops:inputs",
+    ],
+)
+
+
 py_test(
     name = "show_and_tell_model_test",
     size = "large",
@@ -70,6 +82,7 @@ py_binary(
     deps = [
         ":configuration",
         ":show_and_tell_model",
+        ":show_and_tell_model_multi_gpu",
     ],
 )
 
